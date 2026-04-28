@@ -66,7 +66,7 @@ async def 连接状态检查():
     while True:
         await asyncio.sleep(5)
         if 应用.适配器已连接:
-            # 连接正常，不输出日志避免刷屏
+            #logger.debug(f"适配器连接正常: {应用.适配器连接地址}")  好他妈吵，我先注释掉了
             pass
         else:
             logger.error("适配器未连接!")
