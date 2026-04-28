@@ -39,5 +39,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AGENTS.md - 详细的项目架构和开发文档
 - 配置文件模板和示例
 
-[Unreleased]: https://github.com/yourusername/clasto-agent/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/yourusername/clasto-agent/releases/tag/v1.0.0
+[Unreleased]: https://github.com/q541810/clasto_agent/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/q541810/clasto_agent/releases/tag/v1.0.0
