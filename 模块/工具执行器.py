@@ -4,30 +4,17 @@
 # ==========================================
 import json
 import re
-import toml
-import os
 import asyncio
 import html
 import urllib.parse
 import urllib.request
 from 模块.log模块 import logger
 from 模块.openai格式模型调用 import 调用模型, 调用模型流式
+from 模块.配置管理器 import 获取配置管理器
 
-项目根目录 = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-模型配置文件路径 = os.path.join(项目根目录, "配置文件", "model_config.toml")
-
-回复模型配置 = {"model": "", "system_prompt": "", "max_history": 20, "额外参数": {}}
-if os.path.exists(模型配置文件路径):
-    try:
-        with open(模型配置文件路径, "r", encoding="utf-8") as f:
-            _mc = toml.load(f)
-            _rm = _mc.get("回复模型", {})
-            回复模型配置["model"] = _rm.get("model", "")
-            回复模型配置["system_prompt"] = _rm.get("system_prompt", "")
-            回复模型配置["max_history"] = _rm.get("max_history", 20)
-            回复模型配置["额外参数"] = _rm.get("额外参数", {}) if isinstance(_rm.get("额外参数", {}), dict) else {}
-    except Exception as e:
-        logger.error(f"工具执行器读取模型配置失败: {e}")
+# 使用统一的配置管理器
+配置管理器 = 获取配置管理器()
+回复模型配置 = 配置管理器.获取回复模型配置()
 
 
 class 工具注册表:

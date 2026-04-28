@@ -1,106 +1,33 @@
-# ==========================================
+﻿# ==========================================
 # 聊天管理器 (聊天管理器.py)
 # 功能：管理所有聊天流，按群/私聊为单位独立处理消息
 # ==========================================
 import asyncio
 import json
-import toml
-import os
 from 模块.log模块 import logger
 from 模块.openai格式模型调用 import 调用模型, 调用模型流式
 from 模块 import 工具执行器
 from 模块.插件管理器 import 插件管理器
+from 模块.配置管理器 import 获取配置管理器
 
-# 读取回复模型配置
-项目根目录 = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-模型配置文件路径 = os.path.join(项目根目录, "配置文件", "model_config.toml")
-运行逻辑配置文件路径 = os.path.join(项目根目录, "配置文件", "runtime_config.toml")
+# 使用统一的配置管理器
+配置管理器 = 获取配置管理器()
+回复模型配置 = 配置管理器.获取回复模型配置()
+规划模型配置 = 配置管理器.获取规划模型配置()
+筛选模型配置 = 配置管理器.获取筛选模型配置()
+回复逻辑配置 = 配置管理器.获取回复逻辑配置()
 
-回复模型配置 = {"model": "", "system_prompt": "", "max_history": 20, "额外参数": {}}
-规划模型配置 = {"model": "", "system_prompt": "", "额外参数": {}}
-筛选模型配置 = {"model": "", "system_prompt": "", "额外参数": {}}
-回复逻辑配置 = {
-    "bot的名字": "bot",
-    "群聊": {
-        "mode": "群聊回复优化",
-        "关闭规划模型": False,
-    },
-    "私聊": {
-        "mode": "直接规划",
-        "关闭规划模型": False,
-    },
-    "群聊回复优化": {
-        "原因最大字数": 30,
-        "上下文条数": 7,
-        "at必回复": True,
-        "提及关键词": [],
-    }
-}
-if os.path.exists(模型配置文件路径):
-    try:
-        with open(模型配置文件路径, "r", encoding="utf-8") as f:
-            _mc = toml.load(f)
-            _rm = _mc.get("回复模型", {})
-            回复模型配置["model"] = _rm.get("model", "")
-            回复模型配置["system_prompt"] = _rm.get("system_prompt", "")
-            回复模型配置["max_history"] = _rm.get("max_history", 20)
-            回复模型配置["额外参数"] = _rm.get("额外参数", {}) if isinstance(_rm.get("额外参数", {}), dict) else {}
-            _pm = _mc.get("规划模型", {})
-            规划模型配置["model"] = _pm.get("model", "")
-            规划模型配置["system_prompt"] = _pm.get("system_prompt", "")
-            规划模型配置["额外参数"] = _pm.get("额外参数", {}) if isinstance(_pm.get("额外参数", {}), dict) else {}
-            _sm = _mc.get("筛选模型", {})
-            筛选模型配置["model"] = _sm.get("model", "")
-            筛选模型配置["system_prompt"] = _sm.get("system_prompt", "")
-            筛选模型配置["额外参数"] = _sm.get("额外参数", {}) if isinstance(_sm.get("额外参数", {}), dict) else {}
-        logger.info(f"回复模型配置加载成功: {回复模型配置['model']}")
-        if 规划模型配置["model"]:
-            logger.info(f"规划模型配置加载成功: {规划模型配置['model']}")
-        else:
-            logger.info("规划模型未配置，将跳过规划阶段")
-        if 筛选模型配置["model"]:
-            logger.info(f"筛选模型配置加载成功: {筛选模型配置['model']}")
-        else:
-            logger.info("筛选模型未配置，群聊回复优化将默认放行（不使用小模型筛选）")
-    except Exception as e:
-        logger.error(f"模型配置加载失败: {e}")
+# 打印配置加载信息
+logger.info(f"回复模型配置加载成功: {回复模型配置['model']}")
+if 规划模型配置["model"]:
+    logger.info(f"规划模型配置加载成功: {规划模型配置['model']}")
 else:
-    logger.warning("模型配置文件不存在，使用默认配置")
-
-if os.path.exists(运行逻辑配置文件路径):
-    try:
-        with open(运行逻辑配置文件路径, "r", encoding="utf-8") as f:
-            _rc = toml.load(f)
-            回复逻辑配置["bot的名字"] = str(_rc.get("bot的名字", 回复逻辑配置["bot的名字"]))
-            _g = _rc.get("群聊回复逻辑", {})
-            _p = _rc.get("私聊回复逻辑", {})
-            _go = _rc.get("群聊回复优化", {})
-
-            回复逻辑配置["群聊"]["mode"] = _g.get("mode", 回复逻辑配置["群聊"]["mode"])
-            回复逻辑配置["群聊"]["关闭规划模型"] = bool(_g.get("关闭规划模型", 回复逻辑配置["群聊"]["关闭规划模型"]))
-
-            回复逻辑配置["私聊"]["mode"] = _p.get("mode", 回复逻辑配置["私聊"]["mode"])
-            回复逻辑配置["私聊"]["关闭规划模型"] = bool(_p.get("关闭规划模型", 回复逻辑配置["私聊"]["关闭规划模型"]))
-
-            # 兼容旧版配置：若未拆分 ["群聊回复优化"]，则回退读取 ["群聊回复逻辑"] 里的旧字段
-            旧_原因最大字数 = _g.get("原因最大字数", 回复逻辑配置["群聊回复优化"]["原因最大字数"])
-            旧_at必回复 = _g.get("at必回复", 回复逻辑配置["群聊回复优化"]["at必回复"])
-            旧_提及关键词 = _g.get("提及关键词", 回复逻辑配置["群聊回复优化"]["提及关键词"])
-
-            回复逻辑配置["群聊回复优化"]["原因最大字数"] = int(_go.get("原因最大字数", 旧_原因最大字数))
-            回复逻辑配置["群聊回复优化"]["上下文条数"] = int(_go.get("上下文条数", 回复逻辑配置["群聊回复优化"]["上下文条数"]))
-            回复逻辑配置["群聊回复优化"]["at必回复"] = bool(_go.get("at必回复", 旧_at必回复))
-            回复逻辑配置["群聊回复优化"]["提及关键词"] = _go.get("提及关键词", 旧_提及关键词)
-
-            消息分割器配置 = _rc.get("消息分割器", {})
-            回复逻辑配置["消息分割器"] = {
-                "启用": bool(消息分割器配置.get("启用", False)),
-            }
-        logger.info("回复逻辑配置加载成功")
-    except Exception as e:
-        logger.error(f"回复逻辑配置加载失败: {e}")
+    logger.info("规划模型未配置，将跳过规划阶段")
+if 筛选模型配置["model"]:
+    logger.info(f"筛选模型配置加载成功: {筛选模型配置['model']}")
 else:
-    logger.warning("运行逻辑配置文件不存在，使用默认回复逻辑")
+    logger.info("筛选模型未配置，群聊回复优化将默认放行（不使用小模型筛选）")
+logger.info("回复逻辑配置加载成功")
 
 工具执行器.注册内置工具()
 
