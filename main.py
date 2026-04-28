@@ -26,6 +26,8 @@ try:
     from 模块.log模块 import logger # 导入日志模块
     from 模块.openai格式模型调用 import 调用模型
     from 模块.reading_config import 模型配置, 配置内容 # 读取配置文件
+    from 模块.配置管理器 import 获取配置管理器
+    from 模块.配置验证器 import 验证配置并退出如果有错误
     from 模块.启动适配器 import 启动适配器
     from 模块.聊天管理器 import 聊天管理器
     from 模块.聊天管理器 import 设置插件管理器 as _设置聊天管理器插件
@@ -33,6 +35,12 @@ try:
 except ImportError as 导入错误:
     #由于这里出现错误时logger大概率还未初始化，所以使用print
     print(f"导入模块时发生致命错误,请检查运行环境或配置文件: {导入错误}")
+    exit(1)
+
+# 验证配置文件
+配置管理器实例 = 获取配置管理器()
+if not 验证配置并退出如果有错误(配置管理器实例):
+    print("\n请修复配置文件后重新启动程序")
     exit(1)
 
 调试模式 = "-debug" in sys.argv
