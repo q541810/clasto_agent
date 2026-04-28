@@ -1,0 +1,4 @@
+websockets>=16.0
+loguru>=0.7.3
+toml>=0.10.2
+openai>=2.30.0

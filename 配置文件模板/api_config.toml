@@ -1,0 +1,7 @@
+["现有模型厂商"]
+硅基流动 = { url = "https://api.siliconflow.cn/v1", api_key = "换成你自己的api_key" }
+自定义厂商示例 = { url = "https://演示/v1", api_key = "换成你自己的api_key" }
+
+["模型配置"]
+"deepseek-V3.2"={"厂商"="硅基流动","模型id"="deepseek-ai/DeepSeek-V3.2"}
+"Qwen3-VL-32B"={"厂商"="硅基流动","模型id"="Qwen/Qwen3-VL-32B-Instruct"}

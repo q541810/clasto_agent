@@ -1,0 +1,9 @@
+[plugin]
+name = "示例插件"
+version = "1.0.0"
+description = "一个示例插件，展示插件系统的基本用法"
+author = "Clasto"
+priority = 100
+
+[plugin.config]
+greeting = "你好"
