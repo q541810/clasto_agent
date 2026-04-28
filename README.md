@@ -28,98 +28,259 @@ QQ用户 → Napcat → 适配器(正向WS) → 主程序(WS:8081)
 
 ## 快速开始
 
-### 1. 环境要求
+### 第一步：准备环境
 
-- Python 3.10+
-- Napcat（QQ 机器人协议端）
+#### 1.1 安装 Python
 
-### 2. 安装依赖
+**Windows 用户：**
+1. 访问 [Python 官网](https://www.python.org/downloads/)
+2. 下载 Python 3.10 或更高版本
+3. 安装时**务必勾选** "Add Python to PATH"
+4. 安装完成后，打开命令提示符（CMD）或 PowerShell，输入 `python --version` 检查是否安装成功
 
+**macOS/Linux 用户：**
 ```bash
-pip install -r requirements.txt
+# macOS (使用 Homebrew)
+brew install python@3.10
+
+# Ubuntu/Debian
+sudo apt update
+sudo apt install python3.10 python3-pip
+
+# 检查版本
+python3 --version
 ```
 
-### 3. 配置文件
-
-首次运行需要从模板创建配置文件：
+#### 1.2 下载项目
 
 ```bash
-# 复制配置文件模板
+# 克隆项目到本地
+git clone https://github.com/q541810/clasto_agent.git
+cd clasto_agent
+
+# 或者直接下载 ZIP 并解压
+```
+
+#### 1.3 安装依赖
+
+```bash
+# Windows
+pip install -r requirements.txt
+
+# macOS/Linux
+pip3 install -r requirements.txt
+```
+
+如果安装速度慢，可以使用国内镜像：
+```bash
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
+---
+
+### 第二步：获取 AI 模型 API
+
+你需要一个 AI 模型的 API Key。推荐以下平台（选一个即可）：
+
+#### 选项 1：硅基流动（仅为示例，好贵的，不太推荐哦）
+1. 访问 [硅基流动](https://cloud.siliconflow.cn/)
+2. 注册账号并登录
+3. 进入控制台 → API 密钥 → 创建新密钥
+4. 复制 API Key（格式类似：`sk-xxxxxxxxxxxxx`）
+
+#### 选项 2：DeepSeekAPI开放平台（新出的v4 flash便宜的很奥，推荐哦）
+1. 访问 [DeepSeekAPI开放平台](https://platform.deepseek.com/)
+2. 注册并充值）
+3. 创建 API Key
+
+#### 选项 3：其他兼容 OpenAI 格式的平台
+- DeepSeek、智谱 AI、月之暗面等都可以
+
+---
+
+### 第三步：配置文件设置
+
+#### 3.1 复制配置模板
+
+**Windows（PowerShell）：**
+```powershell
+Copy-Item "配置文件模板\api_config.toml" "配置文件\api_config.toml"
+Copy-Item "配置文件模板\model_config.toml" "配置文件\model_config.toml"
+Copy-Item "配置文件模板\runtime_config.toml" "配置文件\runtime_config.toml"
+Copy-Item "模块\适配器\napcat\配置文件模板\config.toml" "模块\适配器\napcat\config.toml"
+```
+
+**macOS/Linux：**
+```bash
 cp 配置文件模板/api_config.toml 配置文件/api_config.toml
 cp 配置文件模板/model_config.toml 配置文件/model_config.toml
 cp 配置文件模板/runtime_config.toml 配置文件/runtime_config.toml
 cp 模块/适配器/napcat/配置文件模板/config.toml 模块/适配器/napcat/config.toml
 ```
 
-#### 配置说明
+#### 3.2 填写 API 配置
 
-**api_config.toml** - API 厂商和模型配置
+打开 `配置文件/api_config.toml`，填入你的 API Key：
 
 ```toml
 ["现有模型厂商"]
-硅基流动 = { url = "https://api.siliconflow.cn/v1", api_key = "你的API_KEY" }
+# 把下面的 "换成你自己的api_key" 替换成你在第二步获取的 API Key
+硅基流动 = { url = "https://api.siliconflow.cn/v1", api_key = "sk-你的真实API_KEY" }
 
 ["模型配置"]
+# 这里配置你要使用的模型
 "deepseek-V3.2" = { "厂商" = "硅基流动", "模型id" = "deepseek-ai/DeepSeek-V3.2" }
 ```
 
-**model_config.toml** - 模型行为配置
+**常用模型推荐：**
+- **DeepSeek-V3**：性价比高，适合日常对话
+- **Qwen2.5-72B**：阿里出品，中文理解好
+- **GPT-4**：最强但贵，需要 OpenAI### 3.3 配置模型行为
+
+打开 `配置文件/model_config.toml`：
 
 ```toml
 ["回复模型"]
-model = "deepseek-V3.2"  # 对应 api_config.toml 中的模型名
-system_prompt = "你是一个乐于助人的AI助手"
-max_history = 20
+model = "deepseek-V3.2"  # 使用你在 api_config.toml 中配置的模型名
+system_prompt = "你是一个乐于助人的AI助手"  # 可以自定义机器人性格
+max_history = 20  # 记住最近 20 条对话
 
 ["规划模型"]
-model = "deepseek-V3.2"  # 留空则跳过规划阶段
+model = "deepseek-V3.2"  # 用于决定调用什么工具
 system_prompt = "你是一个对话规划器。请根据用户意图选择工具。"
 
 ["筛选模型"]
-model = "deepseek-V3.2"  # 用于群聊回复优化，留空则不筛选
+model = ""  # 留空表示不使用筛选（推荐新手先留空）
 ```
 
-**runtime_config.toml** - 运行时逻辑配置
+#### 3.4 配置机器人名字
+
+打开 `配置文件/runtime_config.toml`：
 
 ```toml
-bot的名字 = "小助手"
+bot的名字 = "小助手"  # 改成你喜欢的名字
 模型调用自动重试次数 = 1
 
 ["群聊回复逻辑"]
-mode = "群聊回复优化"  # 或 "直接规划"
+mode = "直接规划"  # 新手推荐用 "直接规划"，简单直接
 关闭规划模型 = false
 
 ["群聊回复优化"]
-at必回复 = true
-提及关键词 = ["小助手", "在吗"]
+at必回复 = true  # 被 @ 时一定回复
+提及关键词 = ["小助手", "在吗"]  # 提到这些词也会回复
 ```
 
-**模块/适配器/napcat/config.toml** - Napcat 连接配置
+---
+
+### 第四步：安装并配置 Napcat
+
+Napcat 是连接 QQ 的桥梁，必须安装。
+
+#### 4.1 下载 Napcat
+
+访问 [Napcat 官方仓库](https://github.com/NapNeko/NapCatQQ/releases)，下载最新版本。
+
+#### 4.2 启动 Napcat
+
+1. 解压下载的文件
+2. 运行 Napcat（具体方法见 Napcat 官方文档）
+3. 登录你的 QQ 机器人账号
+4. 在 Napcat 配置中启用 **WebSocket 正向连接**，端口设为 `3001`
+
+#### 4.3 配置 Napcat 连接
+
+打开 `模块/适配器/napcat/config.toml`：
 
 ```toml
-connection_mode = "forward"  # 正向WS模式
+connection_mode = "forward"  # 正向连接模式
 
 ["napcat_server"]
+host = "localhost"  # Napcat 运行在本机
+port = 3001  # Napcat 的 WebSocket 端口（需要和 Napcat 配置一致）
+token = ""  # 如果 Napcat 设置了 token，填在这里
+
+["clasto_agent"]
 host = "localhost"
-port = 3001  # Napcat 的 WS 端口
-token = ""
+port = 8081  # 本程序监听的端口，不用改
 
 [session_filter.groups]
-mode = "whitelist"  # 白名单模式
-list = [123456789]  # 允许的群号列表
+mode = "whitelist"  # 白名单模式，只回复指定的群
+list = [123456789, 987654321]  # 把这里改成你要让机器人工作的群号
+
+[session_filter.users]
+mode = "none"  # 私聊不筛选，所有人都能聊
+list = []
 ```
 
-### 4. 启动
+**如何获取群号？**
+- 在 QQ 群里点击群头像 → 群设置 → 群号码
+
+---
+
+### 第五步：启动机器人
+
+#### 5.1 先启动 Napcat
+
+确保 Napcat 已经运行并登录了 QQ。并且设置完毕（设置过程详见4.3配置 Napcat 连接）
+
+#### 5.2 启动 Clasto Agent
 
 ```bash
+# Windows
 python main.py
+
+# macOS/Linux
+python3 main.py
 ```
 
-启用调试模式（查看更多日志内容，比如包括内置提示词之类的模型原输入、打开消息分割后每次流式收到的token）：
+#### 5.3 检查启动日志
 
-```bash
-python main.py -debug
+如果看到以下日志，说明启动成功：
 ```
+✓ 配置验证通过
+✓ WebSocket 服务端已在 ws://localhost:8081 启动
+✓ 适配器已连接: ('127.0.0.1', xxxxx)
+```
+
+#### 5.4 测试机器人
+
+在私聊里发送消息（记得看看适配器配置文件哦，别发现没配置白名单）：
+```
+你好
+```
+
+如果机器人回复了，恭喜你成功了！🎉
+
+---
+
+### 常见问题
+
+**Q: 提示 "配置文件 API Key 未修改"**  
+A: 你忘记把 `api_config.toml` 里的 `换成你自己的api_key` 改成真实的 API Key 了。
+
+**Q: 提示 "适配器未连接"**  
+A: 检查 Napcat 是否正常运行，以及端口配置是否一致（默认 3001）。
+
+**Q: 机器人不回复消息**  
+A: 检查群号是否在白名单里，或者把 `mode` 改成 `"none"` 试试。
+
+**Q: 提示 "模型调用失败"**  
+A: 检查 API Key 是否正确，是否有余额，网络是否正常。
+
+**Q: 想看更详细的日志**  
+A: 使用调试模式启动：`python main.py -debug`
+
+---
+
+### 进阶配置
+
+启动成功后，你可以：
+- 调整 `system_prompt` 来改变机器人性格
+- 启用 `筛选模型` 来减少群聊刷屏
+- 开发自己的插件来扩展功能
+- 配置多个模型厂商实现负载均衡
+
+详细文档请查看 [AGENTS.(AGENTS.md)
 
 ## 内置工具
 
