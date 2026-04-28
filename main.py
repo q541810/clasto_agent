@@ -24,6 +24,7 @@ try:
     import json
     import os
     from 模块.log模块 import logger # 导入日志模块
+    from 模块.版本 import 程序版本, 配置文件版本 # 导入版本信息
     from 模块.openai格式模型调用 import 调用模型
     from 模块.reading_config import 模型配置, 配置内容 # 读取配置文件
     from 模块.配置管理器 import 获取配置管理器
@@ -38,9 +39,22 @@ except ImportError as 导入错误:
     print(f"导入模块时发生致命错误,请检查运行环境或配置文件: {导入错误}")
     exit(1)
 
+# 打印版本信息
+logger.info(f"Clasto Agent 版本: {程序版本}")
+
 # 验证配置文件
 配置管理器实例 = 获取配置管理器()
+
+# 检查配置文件版本
+运行时配置 = 配置管理器实例.获取运行时配置()
+配置中的版本 = 运行时配置.get("配置文件版本", "未知")
+
+if 配置中的版本 != 配置文件版本:
+    logger.warning(f"配置文件版本不匹配！程序期望: {配置文件版本}, 配置文件: {配置中的版本}")
+    logger.warning("建议从 配置文件模板/ 目录更新配置文件，或在配置文件顶部添加: 配置文件版本 = \"{配置文件版本}\"")
+
 if not 验证配置并退出如果有错误(配置管理器实例):
+    logger.error(f"配置验证失败 - 程序版本: {程序版本}, 配置文件版本: {配置中的版本}")
     print("\n请修复配置文件后重新启动程序")
     exit(1)
 
